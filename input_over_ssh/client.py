@@ -21,9 +21,16 @@ import asyncio
 import evdev
 import json
 
-async def forward_device(i, device):
+async def do_forward_device(i, device):
 	async for event in device.async_read_loop():
 		print(json.dumps([i, event.type, event.code, event.value]))
+
+async def forward_device(i, device):
+	if args.exclusive:
+		with device.grab_context():
+			await do_forward_device(i, device)
+	else:
+		await do_forward_device(i, device)
 
 def encode_device(device):
 	cap = device.capabilities()
@@ -68,6 +75,7 @@ parser = argparse.ArgumentParser(description='input-over-ssh client')
 parser.add_argument('-L', '--list-devices', dest='action', action='store_const', const=list_devices, help='List available input devices')
 parser.add_argument('-p', '--device-by-path', action='append', default=[], help='Forward device with the given path')
 parser.add_argument('-n', '--device-by-name', action='append', default=[], help='Forward device with the given name')
+parser.add_argument('-e', '--exclusive', action='store_true', help='Grab the device for exclusive input')
 args = parser.parse_args()
 
 if not args.action:

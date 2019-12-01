@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-#   input-over-ssh: Mouse and keyboard forwarding over SSH
+#   input-over-ssh: Forwarding arbitrary input devices over SSH
 #   Copyright © 2019  Lee Yingtong Li (RunasSudo)
 #
 #   This program is free software: you can redistribute it and/or modify

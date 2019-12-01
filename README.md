@@ -22,4 +22,6 @@ Then pass the path of the device to be forwarded, and pipe the output to an inst
 python -u -m input_over_ssh.client -p /dev/input/event1 | ssh hostname.example.com 'PYTHONPATH=/path/to/input-over-ssh python -m input_over_ssh.server'
 ```
 
+For the adventurous, you ought to be able to replace ssh with [mosh](https://mosh.org/) or netcat over UDP to further reduce latency.
+
 For a full list of command-line options, run `python -m input_over_ssh.client --help`.

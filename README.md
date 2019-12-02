@@ -14,7 +14,7 @@ Then navigate to the root directory on the client and run:
 python -m input_over_ssh.client -L
 ```
 
-This will print a list of all available evdev/libinput devices. If no devices appear, ensure the current user has access to the raw */dev/input* device files (e.g. by adding the user to the *input* group).
+This will print a list of all available evdev devices. If no devices appear, ensure the current user has access to the raw */dev/input* device files (e.g. by adding the user to the *input* group).
 
 Then pass the path of the device to be forwarded, and pipe the output to an instance of input-over-ssh running on the server. Also pass the `-u` flag to Python when running the client, to force unbuffered output. For example:
 
@@ -22,6 +22,6 @@ Then pass the path of the device to be forwarded, and pipe the output to an inst
 python -u -m input_over_ssh.client -p /dev/input/event1 | ssh hostname.example.com 'PYTHONPATH=/path/to/input-over-ssh python -m input_over_ssh.server'
 ```
 
-For the adventurous, you ought to be able to replace ssh with [mosh](https://mosh.org/) or netcat over UDP to further reduce latency.
+For the adventurous, you ought to be able to replace ssh with netcat/socat over UDP to further reduce latency.
 
 For a full list of command-line options, run `python -m input_over_ssh.client --help`.

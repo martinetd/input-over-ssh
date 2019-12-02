@@ -14,7 +14,7 @@
 #   You should have received a copy of the GNU Affero General Public License
 #   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-PROTOCOL_VERSION = '1'
+PROTOCOL_VERSION = '2'
 
 import argparse
 import asyncio
@@ -38,7 +38,7 @@ def encode_device(device):
 	cap_json = {}
 	for k, v in cap.items():
 		cap_json[k] = [x if not isinstance(x, tuple) else [x[0], x[1]._asdict()] for x in v]
-	return {'name': device.name, 'capabilities': cap_json}
+	return {'name': device.name, 'capabilities': cap_json, 'vendor': device.info.vendor, 'product': device.info.product}
 
 async def run_forward():
 	# Find devices

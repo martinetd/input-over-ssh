@@ -20,10 +20,12 @@ import argparse
 import asyncio
 import evdev
 import json
+import sys
 
 async def do_forward_device(i, device):
     async for event in device.async_read_loop():
         print(json.dumps([i, event.type, event.code, event.value]))
+        sys.stdout.flush()
 
 async def forward_device(i, device):
     if args.exclusive:

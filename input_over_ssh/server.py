@@ -21,7 +21,7 @@ import evdev
 import json
 
 version = input()
-if version != PROTOCOL_VERSION:
+if version[-1] != PROTOCOL_VERSION:
     raise Exception('Invalid protocol version. Got {}, expected {}.'.format(version, PROTOCOL_VERSION))
 
 devices_json = json.loads(input())

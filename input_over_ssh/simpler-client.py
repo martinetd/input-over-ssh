@@ -5,7 +5,7 @@ import time
 import sys
 import json
 
-idx = sys.argv[1] if len(sys.argv) > 1 else "0"
+idx = sys.argv[1] if len(sys.argv) > 1 else "3"
 infile_path = "/dev/input/event%s" % idx
 
 """
@@ -15,7 +15,7 @@ Stands for: long int, long int, unsigned short, unsigned short, unsigned int
 """
 FORMAT = 'llHHi'
 EVENT_SIZE = struct.calcsize(FORMAT)
-DEBUG = False
+DEBUG = True if len(sys.argv) > 2 else False
 
 #open file in binary mode
 in_file = open(infile_path, "rb")

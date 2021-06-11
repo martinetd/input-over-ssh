@@ -5,6 +5,7 @@ stream events from input device, without depending on evdev
 from __future__ import print_function
 import struct
 import sys
+import time
 import json
 import fcntl
 
@@ -40,6 +41,16 @@ KB_MAPPING = {
     832: 50,   # BS/CS -> m = other context menu
     845: 50,   # BS/CS has 3 values
     858: 50,   # BS/CS has 3 values
+    833: 2,    # 1
+    834: 3,    # 2
+    835: 4,    # 3
+    836: 5,    # 4
+    837: 6,    # 5
+    838: 7,    # 6
+    839: 8,    # 7
+    840: 9,    # 8
+    841: 10,   # 9
+    842: 11,   # 10
     872: 2,    # 1
     873: 3,    # 2
     874: 4,    # 3
@@ -55,7 +66,10 @@ KB_MAPPING = {
     1038: 33,  # prime video -> f = fast forward
 }
 
-BUGGY_MOUSE_KEYS = [139, 362, 773]
+INPUT_SLEEP = 241  # source
+INPUT_WAKE = [833, 872]   # 1
+
+BUGGY_MOUSE_KEYS = [139, 362, 773]  # setting, bangumihyou, home
 
 infos = [
     {
@@ -93,6 +107,11 @@ except IOError:
     print("grab failed, skipping", file=sys.stderr)
 
 event = in_file.read(EVENT_SIZE)
+
+class State():
+    sleeping = False
+    wake_last_ts = 0
+
 
 class Mouse():
     ok = False
@@ -135,10 +154,28 @@ class Mouse():
 
 
 mouse = Mouse()
+state = State()
 
 def parse(tv_sec, tv_usec, evtype, code, value):
+    if state.sleeping:
+        if evtype == 1 and code in INPUT_WAKE:
+            if value == 1:
+                state.wake_last_ts = time.time()
+            else:
+                if time.time() - state.wake_last_ts > 1:
+                    state.sleeping = False
+                    print("Resume remote", file=sys.stderr)
+                    fcntl.ioctl(in_file, 0x40044590, 1)
+        return
+
     if evtype == 0 and code == 0 and value == 0:
         pass
+    elif evtype == 1 and code == INPUT_SLEEP:
+        state.sleeping = True
+        print("Suspend remote", file=sys.stderr)
+        # ungrab
+        fcntl.ioctl(in_file, 0x40044590, 0)
+        return
     elif mouse.input(evtype, code, value):
         # it printed
         pass

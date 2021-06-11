@@ -9,8 +9,21 @@ import time
 import json
 import fcntl
 
-idx = sys.argv[1] if len(sys.argv) > 1 else "3"
-infile_path = "/dev/input/event%s" % idx
+from optparse import OptionParser
+import subprocess
+
+parser = OptionParser()
+parser.add_option('-c', '--command', action='store', type='string',
+                  help='write to command stdin, or stdout by default')
+parser.add_option('-v', '--verbose', action='store_true')
+parser.add_option('-e', '--event', action='store', type='string', default='0',
+                  help='event number e.g. 3 for /dev/input/event3 (default 0)')
+
+(options, args) = parser.parse_args()
+
+infile_path = "/dev/input/event%s" % options.event
+outfile = sys.stdout
+outproc = None
 
 """
 FORMAT represents the format used by linux kernel input event struct. See
@@ -19,7 +32,7 @@ Stands for: long int, long int, unsigned short, unsigned short, unsigned int
 """
 FORMAT = 'llHHi'
 EVENT_SIZE = struct.calcsize(FORMAT)
-DEBUG = (len(sys.argv) > 2)
+DEBUG = options.verbose
 
 KB_MAPPING = {
     28: 28,    # return
@@ -92,9 +105,41 @@ infos = [
     },
 ]
 
-print(2)
-print(json.dumps(infos))
-sys.stdout.flush()
+
+class Output():
+    def __init__(self, command, infos):
+        self.command = command
+        self.infos = infos
+        if not command:
+            self.outfile = sys.stdout
+            return
+        self.outproc = None
+        self.reconnect()
+
+    def reconnect(self):
+        if self.outproc:
+            self.outproc.wait()
+        self.outproc = subprocess.Popen(self.command, shell=True,
+                                        stdin=subprocess.PIPE)
+        self.outfile = self.outproc.stdin
+        print(2, file=self.outfile)
+        print(json.dumps(self.infos), file=self.outfile)
+        self.outfile.flush()
+
+    def write(self, line):
+        try:
+            print(line, file=self.outfile)
+            self.outfile.flush()
+        except IOError:
+            # XXX check errno = 32 (broken pipe)
+            if not self.command:
+                raise
+            self.reconnect()
+            self.write(line)
+
+
+output = Output(options.command, infos)
+
 
 # open file in binary mode
 in_file = open(infile_path, "rb")
@@ -150,7 +195,7 @@ class Mouse():
         if self.skip_next:
             self.ok = False
             return True
-        print("[1, %i, %i, %i]" % (evtype, code, value))
+        output.write("[1, %i, %i, %i]" % (evtype, code, value))
         return True
 
 
@@ -184,7 +229,7 @@ def parse(tv_sec, tv_usec, evtype, code, value):
         # "keyboard" keys
         if code in BUGGY_MOUSE_KEYS:
             mouse.skip_next = True
-        print("[0, %i, %i, %i]" % (evtype, KB_MAPPING[code], value))
+        output.write("[0, %i, %i, %i]" % (evtype, KB_MAPPING[code], value))
         mouse.ok = False
     else:
         print("Unhandled key: type %i, code %i, value %i at %d.%06d" %

@@ -94,6 +94,7 @@ infos = [
 
 print(2)
 print(json.dumps(infos))
+sys.stdout.flush()
 
 # open file in binary mode
 in_file = open(infile_path, "rb")

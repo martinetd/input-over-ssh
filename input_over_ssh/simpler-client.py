@@ -63,7 +63,7 @@ def get_bits(filename):
 # ioctl(6, 0x80044584 /* EVIOCGEFFECTS */, [0]) = 0
 #
 # ioctl(6, 0x80604520 /* EVIOCGBIT(0, 96) */, [0 /* EV_SYN */, 0x5 /* EV_SW */] /* [0x21] */) = 8
-# 
+#
 # [{"name": "Logitech MX Ergo Multi-Device Trackball ", "capabilities": {"1": [272, 273, 274, 275, 276, 277, 278, 279, 280, 281, 282, 283, 284, 285, 286, 287], "2": [0, 1, 6, 8, 11, 12], "4": [4]}, "vendor": 1133, "product": 45085}]
 
 sys_prefix = "/sys/class/input/event%s/device/" % idx

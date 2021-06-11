@@ -1,4 +1,7 @@
 #!/usr/bin/python
+"""
+stream events from input device, without depending on evdev
+"""
 from __future__ import print_function
 import struct
 import sys
@@ -9,8 +12,8 @@ idx = sys.argv[1] if len(sys.argv) > 1 else "3"
 infile_path = "/dev/input/event%s" % idx
 
 """
-FORMAT represents the format used by linux kernel input event struct
-See https://github.com/torvalds/linux/blob/v5.5-rc5/include/uapi/linux/input.h#L28
+FORMAT represents the format used by linux kernel input event struct. See
+https://github.com/torvalds/linux/blob/v5.5-rc5/include/uapi/linux/input.h#L28
 Stands for: long int, long int, unsigned short, unsigned short, unsigned int
 """
 FORMAT = 'llHHi'
@@ -23,11 +26,36 @@ KB_MAPPING = {
     105: 105,  # left
     106: 106,  # right
     108: 108,  # down
+    113: 113,  # mute
     114: 114,  # volumedown
     115: 115,  # volumeup
-    # 402 -> chanup
-    # 403 -> chandown
+    139: 16,   # settings -> q = queue
+    272: 28,   # left click when no mouse -> return
+    362: 23,   # bangumihyou -> i = info
+    402: 102,  # chanup -> home
+    403: 107,  # chandown -> end
+    412: 14,   # modoru -> backspace = back (to playing or parent folder)
+    428: 57,   # mic -> space = play/pause
+    773: 1,    # home -> ESC = home
+    832: 50,   # BS/CS -> m = other context menu
+    845: 50,   # BS/CS has 3 values
+    858: 50,   # BS/CS has 3 values
+    872: 2,    # 1
+    873: 3,    # 2
+    874: 4,    # 3
+    875: 5,    # 4
+    876: 6,    # 5
+    877: 7,    # 6
+    878: 8,    # 7
+    879: 9,    # 8
+    880: 10,   # 9
+    881: 11,   # 10
+    994: 46,   # sub -> c = context menu
+    1037: 19,  # netflix -> r = rewind
+    1038: 33,  # prime video -> f = fast forward
 }
+
+BUGGY_MOUSE_KEYS = [139, 362, 773]
 
 infos = [
     {
@@ -57,37 +85,83 @@ print(json.dumps(infos))
 in_file = open(infile_path, "rb")
 
 # grab device, this is EVIOCGRAB
-fcntl.ioctl(in_file, 0x40044590, 1)
+try:
+    fcntl.ioctl(in_file, 0x40044590, 1)
+except IOError:
+    # device busy? XXX kill old and try again?
+    # continue for now
+    print("grab failed, skipping", file=sys.stderr)
 
 event = in_file.read(EVENT_SIZE)
 
-while event:
-    (tv_sec, tv_usec, type, code, value) = struct.unpack(FORMAT, event)
+class Mouse():
+    ok = False
+    skip_next = False
 
-    if type == 0 and code == 0 and value == 0:
+    def convert(self, evtype, code, value):
+        if evtype == 1 and code == 1198:
+            # "pen" touch down
+            self.ok = True
+            return (1, 330, 0)
+        if evtype == 1 and code == 1199:
+            # "pen" touch up
+            self.ok = False
+            return (1, 330, 1)
+        if evtype == 1 and code in [272, 28] and self.ok:
+            # left click, or enter
+            return (1, 272, value)
+        if evtype == 3:
+            # absolute position
+            if not self.ok:
+                self.skip_next = True
+            return (3, code, value)
+        if evtype == 2 and code == 8:
+            # wheel scroll
+            self.ok = True
+            return (2, 8, value)
+
+        return (0, 0, 0)
+
+
+    def input(self, evtype, code, value):
+        (evtype, code, value) = self.convert(evtype, code, value)
+        if evtype == 0:
+            return False
+        if self.skip_next:
+            self.ok = False
+            return True
+        print("[1, %i, %i, %i]" % (evtype, code, value))
+        return True
+
+
+mouse = Mouse()
+
+def parse(tv_sec, tv_usec, evtype, code, value):
+    if evtype == 0 and code == 0 and value == 0:
         pass
-    elif type == 1 and code == 1198:
-        print("[1, 1, 330, 0]")
-    elif type == 1 and code == 1199:
-        print("[1, 1, 330, 1]")
-    elif type == 1 and code == 272:
-        # mouse left click: OK as is
-        print("[1, %i, %i, %i]" % (type, code, value))
-    elif type == 1 and code in KB_MAPPING:
+    elif mouse.input(evtype, code, value):
+        # it printed
+        pass
+    elif evtype == 1 and code in KB_MAPPING:
         # "keyboard" keys
-        print("[0, %i, %i, %i]" % (type, KB_MAPPING[code], value))
-    elif type == 3:
-        print("[1, %i, %i, %i]" % (type, code, value))
+        if code in BUGGY_MOUSE_KEYS:
+            mouse.skip_next = True
+        print("[0, %i, %i, %i]" % (evtype, KB_MAPPING[code], value))
+        mouse.ok = False
     else:
         print("Unhandled key: type %i, code %i, value %i at %d.%06d" %
-              (type, code, value, tv_sec, tv_usec),
+              (evtype, code, value, tv_sec, tv_usec),
               file=sys.stderr)
     if DEBUG:
         print("Event: type %i, code %i (-> %i), value %i at %d.%06d" %
-              (type, code, KB_MAPPING[code] if code in KB_MAPPING else code,
+              (evtype, code, KB_MAPPING[code] if code in KB_MAPPING else code,
                value, tv_sec, tv_usec),
               file=sys.stderr)
     sys.stdout.flush()
+
+
+while event:
+    parse(*struct.unpack(FORMAT, event))
 
     event = in_file.read(EVENT_SIZE)
 

@@ -38,3 +38,4 @@ while True:
     event = json.loads(input())
     #print(event)
     devices[event[0]].write(event[1], event[2], event[3])
+    devices[event[0]].syn()

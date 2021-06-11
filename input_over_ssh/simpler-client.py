@@ -3,6 +3,7 @@ from __future__ import print_function
 import struct
 import sys
 import json
+import fcntl
 
 idx = sys.argv[1] if len(sys.argv) > 1 else "3"
 infile_path = "/dev/input/event%s" % idx
@@ -54,6 +55,10 @@ print(json.dumps(infos))
 
 # open file in binary mode
 in_file = open(infile_path, "rb")
+
+# grab device, this is EVIOCGRAB
+fcntl.ioctl(in_file, 0x40044590, 1)
+
 event = in_file.read(EVENT_SIZE)
 
 while event:

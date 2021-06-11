@@ -15,10 +15,33 @@
 #   You should have received a copy of the GNU Affero General Public License
 #   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-PROTOCOL_VERSION = '2'
-
+import sys
+import os
 import evdev
 import json
+from optparse import OptionParser
+
+
+parser = OptionParser()
+parser.add_option('--pidfile', action='store', type='string',
+                  help="pid file to kill old process if set")
+
+(options, args) = parser.parse_args()
+
+if (options.pidfile and options.pidfile[-4:] == '.pid'
+    and options.pidfile[:5] == '/run/'):
+    try:
+        with open(options.pidfile, 'r') as pidfile:
+            oldpid = pidfile.read().strip()
+            with open('/proc/%s/cmdline' % oldpid, 'r') as cmdline:
+                if sys.argv[0] in cmdline.read():
+                    os.kill(int(oldpid), 15)
+    except FileNotFoundError:
+        pass
+    with open(options.pidfile, 'w') as pidfile:
+        pidfile.write("%d\n" % os.getpid())
+
+PROTOCOL_VERSION = '2'
 
 version = input()
 if version[-1] != PROTOCOL_VERSION:

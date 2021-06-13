@@ -15,7 +15,7 @@ import subprocess
 parser = OptionParser()
 parser.add_option('-c', '--command', action='store', type='string',
                   help='write to command stdin, or stdout by default')
-parser.add_option('-v', '--verbose', action='store_true')
+parser.add_option('-v', '--verbose', action='count')
 parser.add_option('-e', '--event', action='store', type='string', default='0',
                   help='event number e.g. 3 for /dev/input/event3 (default 0)')
 
@@ -130,6 +130,8 @@ class Output():
         try:
             print(line, file=self.outfile)
             self.outfile.flush()
+            if DEBUG > 0:
+                print(line, file=sys.stderr)
         except IOError:
             # XXX check errno = 32 (broken pipe)
             if not self.command:
@@ -203,6 +205,13 @@ mouse = Mouse()
 state = State()
 
 def parse(tv_sec, tv_usec, evtype, code, value):
+    if DEBUG == 2:
+        print("Event: type %i, code %i (-> %i), value %i at %d.%06d" %
+              (evtype, code,
+               KB_MAPPINGS[code] if code in KB_MAPPINGS else code,
+               value, tv_sec, tv_usec),
+              file=sys.stderr)
+
     if state.sleeping:
         if evtype == 1 and code in INPUT_WAKE:
             if value == 1:
@@ -234,11 +243,6 @@ def parse(tv_sec, tv_usec, evtype, code, value):
     else:
         print("Unhandled key: type %i, code %i, value %i at %d.%06d" %
               (evtype, code, value, tv_sec, tv_usec),
-              file=sys.stderr)
-    if DEBUG:
-        print("Event: type %i, code %i (-> %i), value %i at %d.%06d" %
-              (evtype, code, KB_MAPPING[code] if code in KB_MAPPING else code,
-               value, tv_sec, tv_usec),
               file=sys.stderr)
     sys.stdout.flush()
 

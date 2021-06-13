@@ -64,14 +64,9 @@ async def run_forward():
 
     tasks = []
     for i, device in enumerate(devices):
-        device.grab()
         tasks.append(asyncio.create_task(forward_device(i, device)))
 
-    try:
-        await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
-    finally:
-        for device in devices:
-            device.ungrab()
+    await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
 
 async def list_devices():
     for path in evdev.list_devices():

@@ -34,7 +34,7 @@ FORMAT = 'llHHi'
 EVENT_SIZE = struct.calcsize(FORMAT)
 DEBUG = options.verbose
 
-KB_MAPPING = {
+KB_MAPPINGS = {
     28: 28,    # return
     103: 103,  # up
     105: 105,  # left
@@ -46,6 +46,7 @@ KB_MAPPING = {
     139: 16,   # settings -> q = queue
     272: 28,   # left click when no mouse -> return
     362: 23,   # bangumihyou -> i = info
+    400: 33,   # yellow corner: f (+alt)
     402: 102,  # chanup -> home
     403: 107,  # chandown -> end
     412: 14,   # modoru -> backspace = back (to playing or parent folder)
@@ -79,6 +80,10 @@ KB_MAPPING = {
     1038: 33,  # prime video -> f = fast forward
 }
 
+KB_MODIFIERS = {
+    400: 56,  # yellow corner: alt (+f)
+}
+
 INPUT_SLEEP = 241  # source
 INPUT_WAKE = [833, 872]   # 1
 
@@ -88,7 +93,7 @@ infos = [
     {
         'name': 'keyboard',
         'capabilities': {
-            1: list(KB_MAPPING.values()),
+            1: list(KB_MAPPINGS.values()) + list(KB_MODIFIERS.values()),
         },
         'vendor': 1,
         'product': 1,
@@ -239,11 +244,15 @@ def parse(tv_sec, tv_usec, evtype, code, value):
     elif mouse.input(evtype, code, value):
         # it printed
         pass
-    elif evtype == 1 and code in KB_MAPPING:
+    elif evtype == 1 and code in KB_MAPPINGS:
         # "keyboard" keys
         if code in BUGGY_MOUSE_KEYS:
             mouse.skip_next = True
-        output.write("[0, %i, %i, %i]" % (evtype, KB_MAPPING[code], value))
+        if value == 1 and code in KB_MODIFIERS:
+            output.write("[0, 1, %i, 1]" % KB_MODIFIERS[code])
+        output.write("[0, 1, %i, %i]" % (KB_MAPPINGS[code], value))
+        if value == 0 and code in KB_MODIFIERS:
+            output.write("[0, 1, %i, 0]" % KB_MODIFIERS[code])
         mouse.ok = False
     else:
         print("Unhandled key: type %i, code %i, value %i at %d.%06d" %

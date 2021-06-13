@@ -169,10 +169,14 @@ class Mouse():
         if evtype == 1 and code == 1198:
             # "pen" touch down
             self.ok = True
+            if value == 0:
+                self.skip_next = True
             return (1, 330, 0)
         if evtype == 1 and code == 1199:
             # "pen" touch up
             self.ok = False
+            if value == 0:
+                self.skip_next = True
             return (1, 330, 1)
         if evtype == 1 and code in [272, 28] and self.ok:
             # left click, or enter
@@ -196,6 +200,7 @@ class Mouse():
             return False
         if self.skip_next:
             self.ok = False
+            self.skip_next = False
             return True
         output.write("[1, %i, %i, %i]" % (evtype, code, value))
         return True

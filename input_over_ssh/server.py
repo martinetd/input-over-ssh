@@ -28,8 +28,9 @@ parser.add_option('--pidfile', action='store', type='string',
 
 (options, args) = parser.parse_args()
 
-if (options.pidfile and options.pidfile[-4:] == '.pid'
-    and options.pidfile[:5] == '/run/'):
+if (options.pidfile and options.pidfile.endswith('.pid')
+        and options.pidfile.startswith('/run/')
+        and '..' not in options.pidfile):
     try:
         with open(options.pidfile, 'r') as pidfile:
             oldpid = pidfile.read().strip()

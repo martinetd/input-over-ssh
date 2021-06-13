@@ -5,9 +5,12 @@ stream events from input device, without depending on evdev
 from __future__ import print_function
 import struct
 import sys
+import os
 import time
 import json
 import fcntl
+import errno
+import signal
 
 from optparse import OptionParser
 import subprocess
@@ -18,8 +21,29 @@ parser.add_option('-c', '--command', action='store', type='string',
 parser.add_option('-v', '--verbose', action='count')
 parser.add_option('-e', '--event', action='store', type='string', default='0',
                   help='event number e.g. 3 for /dev/input/event3 (default 0)')
+parser.add_option('-p', '--pidfile', action='store', type='string',
+                  help='pidfile, also kills old instance if existed')
+parser.add_option('-D', '--daemonize', action='store_true',
+                  help='close files and daemonizes. requires -c')
 
 (options, args) = parser.parse_args()
+
+if (options.pidfile and options.pidfile.endswith('.pid')
+        and options.pidfile.startswith('/run/')
+        and '..' not in options.pidfile):
+    try:
+        with open(options.pidfile, 'r') as pidfile:
+            oldpid = pidfile.read().strip()
+            with open('/proc/%s/cmdline' % oldpid, 'r') as cmdline:
+                if __file__ in cmdline.read():
+                    os.kill(int(oldpid), 15)
+    except EnvironmentError as err:
+        if err.errno == errno.ENOENT:
+            pass
+        else:
+            raise
+else:
+    options.pidfile = None
 
 infile_path = "/dev/input/event%s" % options.event
 outfile = sys.stdout
@@ -131,6 +155,12 @@ class Output():
         print(json.dumps(self.infos), file=self.outfile)
         self.outfile.flush()
 
+    def close(self, *args):
+        if self.outproc:
+            if not self.outproc.poll():
+                self.outproc.terminate()
+        sys.exit(0)
+
     def write(self, line):
         try:
             print(line, file=self.outfile)
@@ -145,19 +175,44 @@ class Output():
             self.write(line)
 
 
-output = Output(options.command, infos)
-
-
 # open file in binary mode
 in_file = open(infile_path, "rb")
 
-# grab device, this is EVIOCGRAB
-try:
-    fcntl.ioctl(in_file, 0x40044590, 1)
-except IOError:
-    # device busy? XXX kill old and try again?
-    # continue for now
-    print("grab failed, skipping", file=sys.stderr)
+retries = 10
+while retries > 0:
+    try:
+        # grab device, this is EVIOCGRAB
+        fcntl.ioctl(in_file, 0x40044590, 1)
+        break
+    except IOError:
+        # device busy? XXX kill old and try again?
+        # continue for now
+        if retries <= 1:
+            print("Could not grab, aborting", file=sys.stderr)
+            sys.exit(1)
+    retries -= 1
+    time.sleep(0.2)
+
+if options.daemonize:
+    if not options.command:
+        print("Cannot daemonize if no command!", file=sys.stderr)
+        sys.exit(1)
+    devnull = open('/dev/null', 'w+')
+    #sys.stdout = devnull
+    #sys.stderr = devnull
+    sys.stdin.close()
+    if os.fork() != 0:
+        sys.exit(0)
+    if os.fork() != 0:
+        sys.exit(0)
+
+if options.pidfile:
+    with open(options.pidfile, 'w') as pidfile:
+        pidfile.write("%d\n" % os.getpid())
+
+output = Output(options.command, infos)
+
+signal.signal(signal.SIGTERM, output.close)
 
 event = in_file.read(EVENT_SIZE)
 

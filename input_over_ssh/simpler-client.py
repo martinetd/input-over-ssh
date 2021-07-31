@@ -65,12 +65,14 @@ KB_MAPPINGS = {
     106: 106,  # right
     108: 108,  # down
     113: 113,  # mute
-    114: 114,  # volumedown
-    115: 115,  # volumeup
+    114: 74,   # volumedown -> - (keypad)
+    115: 78,   # volumeup -> + (keypad)
     139: 16,   # settings -> q = queue
     272: 28,   # left click when no mouse -> return
     362: 23,   # bangumihyou -> i = info
     400: 33,   # yellow corner: f (+alt)
+    401: 26,   # blue corner: [
+    398: 27,   # red corner: ]
     402: 102,  # chanup -> home
     403: 107,  # chandown -> end
     412: 14,   # modoru -> backspace = back (to playing or parent folder)

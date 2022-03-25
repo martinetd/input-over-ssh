@@ -70,9 +70,10 @@ KB_MAPPINGS = {
     139: 16,   # settings -> q = queue
     272: 28,   # left click when no mouse -> return
     362: 23,   # bangumihyou -> i = info
-    400: 33,   # yellow corner: f (+alt)
     401: 26,   # blue corner: [
     398: 27,   # red corner: ]
+    399: 33,   # green corner: f (+alt)
+    400: 17,   # yellow corner: w (+alt)
     402: 102,  # chanup -> home
     403: 107,  # chandown -> end
     412: 14,   # modoru -> backspace = back (to playing or parent folder)
@@ -107,10 +108,11 @@ KB_MAPPINGS = {
 }
 
 KB_MODIFIERS = {
-    400: 56,  # yellow corner: alt (+f)
+    399: 56,  # green corner: alt (+f)
+    400: 56,  # yellow corner: alt (+w)
 }
 
-INPUT_SLEEP = 241  # source
+INPUT_SLEEP = [241, 834, 873, 835, 874]  # source, 2, 3
 INPUT_WAKE = [833, 872]   # 1
 
 BUGGY_MOUSE_KEYS = [139, 362, 773]  # setting, bangumihyou, home
@@ -292,7 +294,7 @@ def parse(tv_sec, tv_usec, evtype, code, value):
 
     if evtype == 0 and code == 0 and value == 0:
         pass
-    elif evtype == 1 and code == INPUT_SLEEP:
+    elif evtype == 1 and code in INPUT_SLEEP:
         state.sleeping = True
         print("Suspend remote", file=sys.stderr)
         # ungrab

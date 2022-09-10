@@ -1,4 +1,6 @@
 #!/usr/bin/python
+# coding=utf-8
+
 """
 stream events from input device, without depending on evdev
 """
@@ -10,6 +12,7 @@ import time
 import json
 import fcntl
 import errno
+import select
 import signal
 
 from optparse import OptionParser
@@ -218,8 +221,6 @@ output = Output(options.command, infos)
 
 signal.signal(signal.SIGTERM, output.close)
 
-event = in_file.read(EVENT_SIZE)
-
 class State():
     sleeping = False
     wake_last_ts = 0
@@ -320,9 +321,33 @@ def parse(tv_sec, tv_usec, evtype, code, value):
     sys.stdout.flush()
 
 
-while event:
-    parse(*struct.unpack(FORMAT, event))
+def check_freespace():
+    try:
+        stat = os.statvfs('/tmp/usb/sda/sda1/')
+    except OSError:
+        return
+    left_gb = stat.f_bavail * stat.f_bsize / 1024 / 1204 / 1024
+    if left_gb < 40:
+        msg = "ディスクの容量が少ない（%d GB)" % (left_gb)
+        json = '{ "message": "%s", "buttons": [{"label": "Ok"}]}' % (msg)
+        cmd = "luna-send -n 1 luna://com.webos.notification/createAlert '%s'" % (json)
+        os.system(cmd)
 
-    event = in_file.read(EVENT_SIZE)
+
+DISK_CHECK_INTERVAL = 900
+# first check fast
+next_disk_check = time.time() + 10
+
+while True:
+    timeout = next_disk_check - time.time()
+    if timeout <= 0:
+        check_freespace()
+        next_disk_check = time.time() + DISK_CHECK_INTERVAL
+        continue
+
+    (ready, _, _) = select.select([in_file], [], [], timeout)
+    if in_file in ready:
+        event = in_file.read(EVENT_SIZE)
+        parse(*struct.unpack(FORMAT, event))
 
 in_file.close()

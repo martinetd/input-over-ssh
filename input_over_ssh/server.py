@@ -17,6 +17,11 @@
 
 import sys
 import os
+
+import site
+v = sys.version_info
+site.addsitedir(f"/run/current-system/sw/lib/python{v.major}.{v.minor}/site-packages")
+
 import evdev
 import json
 from optparse import OptionParser
@@ -29,8 +34,8 @@ parser.add_option('--pidfile', action='store', type='string',
 (options, args) = parser.parse_args()
 
 if (options.pidfile and options.pidfile.endswith('.pid')
-        and options.pidfile.startswith('/run/')
-        and '..' not in options.pidfile):
+      and options.pidfile.startswith('/run/')
+      and '..' not in options.pidfile):
     try:
         with open(options.pidfile, 'r') as pidfile:
             oldpid = pidfile.read().strip()

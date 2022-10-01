@@ -326,6 +326,12 @@ def check_freespace():
         stat = os.statvfs('/tmp/usb/sda/sda1/')
     except OSError:
         return
+    # if not mounted yet we'll get tmpfs stats,
+    # since we can't get fstype detect this with smaller total size
+    total_gb = stat.f_blocks * stat.f_bsize / 1024 / 1024 / 1024
+    if total_gb < 100:
+        return
+    # and actual left size check
     left_gb = stat.f_bavail * stat.f_bsize / 1024 / 1204 / 1024
     if left_gb < 40:
         msg = "ディスクの容量が少ない（%d GB)" % (left_gb)

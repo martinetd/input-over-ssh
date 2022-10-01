@@ -225,6 +225,16 @@ class State():
     sleeping = False
     wake_last_ts = 0
 
+    def suspend(self):
+        self.sleeping = True
+        # ungrab
+        fcntl.ioctl(in_file, 0x40044590, 0)
+
+    def resume(self):
+        self.sleeping = False
+        # grab
+        fcntl.ioctl(in_file, 0x40044590, 1)
+
 
 class Mouse():
     ok = False
@@ -288,18 +298,15 @@ def parse(tv_sec, tv_usec, evtype, code, value):
                 state.wake_last_ts = time.time()
             else:
                 if time.time() - state.wake_last_ts > 1:
-                    state.sleeping = False
                     print("Resume remote", file=sys.stderr)
-                    fcntl.ioctl(in_file, 0x40044590, 1)
+                    state.resume()
         return
 
     if evtype == 0 and code == 0 and value == 0:
         pass
     elif evtype == 1 and code in INPUT_SLEEP:
-        state.sleeping = True
         print("Suspend remote", file=sys.stderr)
-        # ungrab
-        fcntl.ioctl(in_file, 0x40044590, 0)
+        state.suspend()
         return
     elif mouse.input(evtype, code, value):
         # it printed
@@ -339,6 +346,8 @@ def check_freespace():
         cmd = "luna-send -n 1 luna://com.webos.notification/createAlert '%s'" % (json)
         os.system(cmd)
 
+# init worked: we can now default to suspended state
+state.suspend()
 
 DISK_CHECK_INTERVAL = 900
 # first check fast

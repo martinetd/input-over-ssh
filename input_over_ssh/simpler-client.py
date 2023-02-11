@@ -95,6 +95,8 @@ KB_MAPPINGS = {
     840: 9,    # 8
     841: 10,   # 9
     842: 11,   # 10
+    843: 12,   # minus, probably '11' key in alt mode
+    844: 13,   # equal, probably '12' key in alt mode
     872: 2,    # 1
     873: 3,    # 2
     874: 4,    # 3
@@ -105,6 +107,8 @@ KB_MAPPINGS = {
     879: 9,    # 8
     880: 10,   # 9
     881: 11,   # 10
+    882: 12,   # minus, '11' key
+    883: 13,   # equal, '12' key
     994: 46,   # sub -> c = context menu
     1037: 19,  # netflix -> r = rewind
     1038: 33,  # prime video -> f = fast forward
@@ -117,6 +121,7 @@ KB_MODIFIERS = {
 
 INPUT_SLEEP = [241, 834, 873, 835, 874]  # source, 2, 3
 INPUT_WAKE = [833, 872]   # 1
+INPUT_BT = [844, 883]     # 12
 
 BUGGY_MOUSE_KEYS = [139, 362, 773]  # setting, bangumihyou, home
 
@@ -292,6 +297,15 @@ def parse(tv_sec, tv_usec, evtype, code, value):
                value, tv_sec, tv_usec),
               file=sys.stderr)
 
+    # bluetooth regardless of state
+    if evtype == 1 and code in INPUT_BT:
+        if value == 1:
+            state.wake_last_ts = time.time()
+        else:
+            if time.time() - state.wake_last_ts > 1:
+                print("Connect bluetooth", file=sys.stderr)
+                connect_bluetooth()
+
     if state.sleeping:
         if evtype == 1 and code in INPUT_WAKE:
             if value == 1:
@@ -345,6 +359,12 @@ def check_freespace():
         json = '{ "message": "%s", "buttons": [{"label": "Ok"}]}' % (msg)
         cmd = "luna-send -n 1 luna://com.webos.notification/createAlert '%s'" % (json)
         os.system(cmd)
+
+def connect_bluetooth():
+    json = '{"address": "aa:aa:aa:aa:aa:aa"}'
+    cmd = "luna-send -n 1 luna://com.webos.service.bluetooth2/a2dp/connect '%s'" % (json)
+    os.system(cmd)
+
 
 # init worked: we can now default to suspended state
 state.suspend()

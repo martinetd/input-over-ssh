@@ -62,6 +62,15 @@ EVENT_SIZE = struct.calcsize(FORMAT)
 DEBUG = options.verbose
 
 KB_MAPPINGS = {
+    2: 2,      # 1
+    3: 3,      # 2
+    4: 4,      # 3
+    5: 5,      # 4
+    6: 6,      # 5
+    7: 7,      # 6
+    8: 8,      # 7
+    9: 9,      # 8
+    10: 10,    # 9
     28: 28,    # return
     103: 103,  # up
     105: 105,  # left
@@ -119,8 +128,8 @@ KB_MODIFIERS = {
     400: 56,  # yellow corner: alt (+w)
 }
 
-INPUT_SLEEP = [241, 834, 873, 835, 874]  # source, 2, 3
-INPUT_WAKE = [833, 872]   # 1
+INPUT_SLEEP = [241, 3, 834, 873, 4, 835, 874]  # source, 2, 3
+INPUT_WAKE = [2, 833, 872]   # 1
 INPUT_BT = [844, 883]     # 12
 
 BUGGY_MOUSE_KEYS = [139, 362, 773]  # setting, bangumihyou, home

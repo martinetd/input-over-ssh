@@ -370,13 +370,20 @@ def check_freespace():
         os.system(cmd)
 
 def connect_bluetooth():
-    json = '{"address": "aa:aa:aa:aa:aa:aa"}'
+    mac = '{"address": "aa:aa:aa:aa:aa:aa"}'
     # due to bug (luna://com.webos.service.bluetooth2/device/getStatus -> avrcp active = no output)
     # we disconnect and force connect as a2dp
-    cmd = "luna-send -f -n 1 luna://com.webos.service.bluetooth2/a2dp/disconnect '%s'" % (json)
+    cmd = "luna-send -f -n 1 luna://com.webos.service.bluetooth2/a2dp/disconnect '%s'" % (mac)
+    os.system(cmd)
+    # also make sure we output bt only: set to bt once then normal speakers before reconnecting
+    output = '{"soundOutput": "bt_soundbar"}'
+    cmd = "luna-send -n 1 luna://com.webos.service.audio/setSoundOutput '%s'" % (output)
+    os.system(cmd)
+    output = '{"soundOutput": "tv_speaker"}'
+    cmd = "luna-send -n 1 luna://com.webos.service.audio/setSoundOutput '%s'" % (output)
     os.system(cmd)
     # timeout 1s as can be slow if no device online, and we don't care
-    cmd = "luna-send -w 1000 -n 1 luna://com.webos.service.bluetooth2/a2dp/connect '%s'" % (json)
+    cmd = "luna-send -w 1000 -n 1 luna://com.webos.service.bluetooth2/a2dp/connect '%s'" % (mac)
     os.system(cmd)
 
 
